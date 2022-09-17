@@ -2,11 +2,12 @@ import './App.css';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import axios from 'axios'
 import { FixedNumber } from 'ethers';
-import { ForceGraph3D } from 'react-force-graph';
+import { ForceGraph3D, ForceGraph2D } from 'react-force-graph';
 
 
 function App() {
   const [snapshotData, setSnapshotData] = useState(undefined)
+  const [snapshotLastData, setSnapshotLastData] = useState(undefined)
   const [blocks, setBlocks] = useState([])
   const [sliderValue, setSliderValue] = useState(0)
 
@@ -15,8 +16,6 @@ function App() {
 
   const snapshotIndex = blocks?.[sliderValue]
   const NODE_R = 8
-  console.log(blocks)
-
 
   useEffect(() => {
     const retrieveBlocks = async () => {
@@ -25,6 +24,16 @@ function App() {
     }
     retrieveBlocks()
   }, [])
+
+  useEffect(() => {
+    if (blocks.length === 0) return
+    const retrieveSnapshotLast = async () => {
+      const index = blocks.slice(-1)[0]
+      const response = await axios.get(`/snapshots/${index}.json`)
+      setSnapshotLastData(response.data)
+    }
+    retrieveSnapshotLast()
+  }, [blocks])
 
   useEffect(() => {
     if (snapshotIndex === undefined) return
@@ -50,15 +59,6 @@ function App() {
     console.log(node)
   };
 
-
-  const paintRing = useCallback((node, ctx) => {
-    // add ring just for highlighted nodes
-    ctx.beginPath();
-    ctx.arc(node.x, node.y, NODE_R * 1.4, 0, 2 * Math.PI, false);
-    ctx.fillStyle = node === hoverNode ? 'red' : 'orange';
-    ctx.fill();
-  }, [hoverNode]);
-
   // DRAW COLORED RINGS
   const drawNodeCanvas = useCallback(
     (node, ctx) => {
@@ -68,17 +68,30 @@ function App() {
       const maxBalanceLoaded = !maxBalanceBN.isZero();
       const nodeBalanceBN = FixedNumber.from(node.amount);
       const nodeHasBalance = !nodeBalanceBN.isZero();
+      const isNodePresent = !!snapshotData.nodes.find(n => n.id === node.id)
+
       if (maxBalanceLoaded && nodeHasBalance) {
         let factor = nodeBalanceBN.divUnsafe(maxBalanceBN).toUnsafeFloat();
         const extraRadius = 10.89917 - 1.0 / (Math.sqrt(Math.sqrt(factor)) + 0.11237);
         radius = MIN_RADIUS + extraRadius;
       }
       ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI, false);
-      ctx.fillStyle = !nodeHasBalance ? "grey" : node === hoverNode ? "red" : "blue";
+      //ctx.fillStyle = !nodeHasBalance ? "grey" : node === hoverNode ? "red" : "blue";
+      ctx.fillStyle = !isNodePresent ? 'transparent' : 'black'  //!nodeHasBalance ? "grey" : node === hoverNode ? "red" : "blue";
       ctx.fill();
     },
-    [hoverNode, maxBalanceBN]
+    [hoverNode, maxBalanceBN, snapshotData]
   );
+
+  const drawLinkCanvas = useCallback(
+    (link, ctx) => {
+      const isLinkPresent = !!snapshotData.links.find(l => l.source === link.source && l.target === link.target)
+      ctx.beginPath();
+      ctx.fillStyle = !isLinkPresent ? 'transparent' : 'black'  //!nodeHasBalance ? "grey" : node === hoverNode ? "red" : "blue";
+      ctx.fill();
+    },
+    [snapshotData]
+  )
 
 
   return (
@@ -88,8 +101,8 @@ function App() {
           <input id="default-range" type="range" value={sliderValue} onChange={(e) => setSliderValue(e.target.value)} max={blocks.length} class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700" />
         </div>
       )}
-      {snapshotData && <ForceGraph3D
-        graphData={snapshotData}
+      {snapshotLastData && <ForceGraph2D
+        graphData={snapshotLastData}
         nodeRelSize={NODE_R}
         autoPauseRedraw={false}
         nodeCanvasObject={drawNodeCanvas}

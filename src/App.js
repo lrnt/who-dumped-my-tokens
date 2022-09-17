@@ -38,6 +38,8 @@ function App() {
   useEffect(() => {
     if (snapshotIndex === undefined) return
     const retrieveSnapshots = async () => {
+
+      console.log(snapshotIndex)
       const response = await axios.get(`/snapshots/${snapshotIndex}.json`)
       setSnapshotData(response.data)
 
@@ -68,7 +70,7 @@ function App() {
       const maxBalanceLoaded = !maxBalanceBN.isZero();
       const nodeBalanceBN = FixedNumber.from(node.amount);
       const nodeHasBalance = !nodeBalanceBN.isZero();
-      const isNodePresent = !!snapshotData.nodes.find(n => n.id === node.id)
+      const isNodePresent = !!snapshotData?.nodes.find(n => n.id === node.id)
 
       if (maxBalanceLoaded && nodeHasBalance) {
         let factor = nodeBalanceBN.divUnsafe(maxBalanceBN).toUnsafeFloat();
@@ -77,28 +79,25 @@ function App() {
       }
       ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI, false);
       //ctx.fillStyle = !nodeHasBalance ? "grey" : node === hoverNode ? "red" : "blue";
-      ctx.fillStyle = !isNodePresent ? 'transparent' : 'black'  //!nodeHasBalance ? "grey" : node === hoverNode ? "red" : "blue";
+      ctx.fillStyle = !isNodePresent ? 'transparent' : (!nodeHasBalance ? "grey" : node === hoverNode ? "red" : "blue")
       ctx.fill();
     },
     [hoverNode, maxBalanceBN, snapshotData]
   );
 
-  const drawLinkCanvas = useCallback(
-    (link, ctx) => {
-      const isLinkPresent = !!snapshotData.links.find(l => l.source === link.source && l.target === link.target)
-      ctx.beginPath();
-      ctx.fillStyle = !isLinkPresent ? 'transparent' : 'black'  //!nodeHasBalance ? "grey" : node === hoverNode ? "red" : "blue";
-      ctx.fill();
+  const linkWidth = useCallback(
+    (link) => {
+      const isLinkPresent = !!snapshotData?.links.find(l => l.source === link.source.id && l.target === link.target.id)
+      return isLinkPresent ? 'grey' : 'transparent'
     },
     [snapshotData]
   )
 
-
   return (
     <>
       {blocks && (
-        <div className="w-full">
-          <input id="default-range" type="range" value={sliderValue} onChange={(e) => setSliderValue(e.target.value)} max={blocks.length} class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700" />
+        <div className="flex w-full">
+          <input id="default-range" type="range" value={sliderValue} onChange={(e) => setSliderValue(e.target.value)} max={blocks.length} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700" />
         </div>
       )}
       {snapshotLastData && <ForceGraph2D
@@ -106,6 +105,7 @@ function App() {
         nodeRelSize={NODE_R}
         autoPauseRedraw={false}
         nodeCanvasObject={drawNodeCanvas}
+        linkColor={linkWidth}
         onNodeHover={handleNodeHover}
         onNodeClick={handleClick}
       />

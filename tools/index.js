@@ -91,7 +91,7 @@ console.log(getSnapshot(blockEnd, events))
 const snapshotJSON = JSON.stringify(getSnapshot(blockEnd, events))
 await fs.writeFile('./public/snapshot.json', snapshotJSON, 'utf-8')
 
-const snapshotIndexes = range(blockStart, blockEnd, 200).map(index => {
+const snapshotIndexes = range(blockStart, blockEnd, 20).map(index => {
   const fileName = `./public/snapshots/${index}.json`
   const snapshotJSON = JSON.stringify(getSnapshot(index, events))
   fsSync.writeFileSync(fileName, snapshotJSON, 'utf-8')

@@ -1,7 +1,7 @@
 import axios from "axios";
 import { BigNumber, ethers, providers } from "ethers";
 import retry from "async-retry"
-import { promises as fs } from 'fs';
+import fsSync, { promises as fs } from 'fs';
 
 const etherscanApiKey = "B4PM25UGKVB6GQMW1GZ85BQ3T42Y1YM8GV"
 const provider = new providers.AlchemyProvider("homestead", "5j5E8mip-BikydOl6dDSJ578mKsAXuvJ")
@@ -35,7 +35,6 @@ const events = (await Promise.all(blockRange.map(async range => {
       const { blockNumber } = event
       return { from, to, amount: amount.toString(), blockNumber }
     })
-    console.log(transfers)
     return transfers
   })
 }))).flat(1).sort((a, b) => a.blockNumber > b.blockNumber)
@@ -45,7 +44,8 @@ const eventsJSON = JSON.stringify({
   blockEnd,
   events
 })
-await fs.writeFile('public/events.json', eventsJSON, 'utf-8')
+
+await fs.writeFile('./public/events.json', eventsJSON, 'utf-8')
 
 const getSnapshot = (blockNumber, events) => {
   if (!events) return {nodes: [], links: []}
@@ -89,4 +89,13 @@ const getSnapshot = (blockNumber, events) => {
 console.log(getSnapshot(blockEnd, events))
 
 const snapshotJSON = JSON.stringify(getSnapshot(blockEnd, events))
-await fs.writeFile('public/snapshot.json', snapshotJSON, 'utf-8')
+await fs.writeFile('./public/snapshot.json', snapshotJSON, 'utf-8')
+
+const snapshotIndexes = range(blockStart, blockEnd, 200).map(index => {
+  const fileName = `./public/snapshots/${index}.json`
+  const snapshotJSON = JSON.stringify(getSnapshot(index, events))
+  fsSync.writeFileSync(fileName, snapshotJSON, 'utf-8')
+  return index
+})
+
+await fs.writeFile('./public/snapshot-indexes.json', JSON.stringify(snapshotIndexes), 'utf-8')

@@ -65,6 +65,8 @@ function App() {
 
   const handleClick = node => {
     console.log(node)
+    const url = `https://etherscan.com/address/${node.id}`
+    window.open(url, '_blank').focus();
   };
 
   // DRAW COLORED RINGS

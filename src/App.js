@@ -76,8 +76,9 @@ function App() {
 
       if (nodeBalanceBN.lt(parseEther('100.0'))) radius = 10
       if (nodeBalanceBN.gt(parseEther('100.0'))  && nodeBalanceBN.lt(parseEther('1000.0'))) radius = 30
-      if (nodeBalanceBN.gt(parseEther('1000.0'))  && nodeBalanceBN.lt(parseEther('10000.0'))) radius = 30
-      if (nodeBalanceBN.gt(parseEther('10000.0'))) radius = 100
+      if (nodeBalanceBN.gt(parseEther('1000.0'))  && nodeBalanceBN.lt(parseEther('10000.0'))) radius = 50
+      if (nodeBalanceBN.gt(parseEther('10000.0'))  && nodeBalanceBN.lt(parseEther('100000.0'))) radius = 70
+      if (nodeBalanceBN.gt(parseEther('100000.0'))) radius = 100
 
       //if (maxBalanceLoaded && nodeHasBalance) {
       //  let factor = nodeBalanceBN.divUnsafe(maxBalanceBN).toUnsafeFloat();
@@ -86,6 +87,7 @@ function App() {
       //}
 
 
+      node.r = radius
       ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI, false);
       ctx.fillStyle = !isNodePresent ? 'transparent' : (!nodeHasBalance ? "grey" : node === hoverNode ? "red" : "blue")
       ctx.fill();

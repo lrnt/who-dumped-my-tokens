@@ -1,14 +1,18 @@
 import './App.css';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import axios from 'axios'
-import { BigNumber, FixedNumber } from 'ethers';
+import { BigNumber, FixedNumber, providers } from 'ethers';
 import { ForceGraph3D, ForceGraph2D } from 'react-force-graph';
 import { formatEther, parseEther } from 'ethers/lib/utils';
+
+
+const provider = new providers.AlchemyProvider("homestead", "5j5E8mip-BikydOl6dDSJ578mKsAXuvJ")
 
 
 function App() {
   const [snapshotData, setSnapshotData] = useState(undefined)
   const [snapshotLastData, setSnapshotLastData] = useState(undefined)
+  const [currentTime, setCurrentTime] = useState()
   const [blocks, setBlocks] = useState([])
   const [sliderValue, setSliderValue] = useState(0)
 
@@ -36,9 +40,11 @@ function App() {
 
   useEffect(() => {
     if (snapshotIndex === undefined) return
+    const retrieveBlockTime = async () => {
+      const timestamp = (await provider.getBlock(snapshotIndex)).timestamp
+      setCurrentTime(timestamp * 1000)
+    }
     const retrieveSnapshots = async () => {
-
-      console.log(snapshotIndex)
       const response = await axios.get(`/snapshots/${snapshotIndex}.json`)
       setSnapshotData(response.data)
 
@@ -50,6 +56,7 @@ function App() {
       setMaxBalanceBN(maxBN);
     }
     retrieveSnapshots()
+    retrieveBlockTime()
   }, [snapshotIndex])
 
   const handleNodeHover = node => {
@@ -108,7 +115,18 @@ function App() {
     <>
       {blocks && (
         <div className="flex w-full">
+          <div className="grow">
           <input id="default-range" type="range" value={sliderValue} onChange={(e) => setSliderValue(e.target.value)} max={blocks.length} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700" />
+          </div>
+          <div>
+            {currentTime && (
+              <>
+               {new Date(currentTime).toLocaleDateString()}
+               {" "}
+               {new Date(currentTime).toLocaleTimeString()}
+              </>
+            )}
+          </div>
         </div>
       )}
       {snapshotLastData && <ForceGraph2D

@@ -98,7 +98,7 @@ function App() {
 
       node.r = radius
       ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI, false);
-      ctx.fillStyle = !isNodePresent ? 'transparent' : (!nodeHasBalance ? "grey" : node === hoverNode ? "red" : "blue")
+      ctx.fillStyle = !isNodePresent ? 'transparent' : (!nodeHasBalance ? "grey" : node === hoverNode ? "red" : "#c7d2fe")
       ctx.fill();
     },
     [hoverNode, maxBalanceBN, snapshotData]
@@ -116,9 +116,9 @@ function App() {
   return (
     <>
       {blocks && (
-        <div className="flex w-full">
+        <div className="flex w-full bg-black text-white px-2 gap-2">
           <div className="grow">
-          <input id="default-range" type="range" value={sliderValue} onChange={(e) => setSliderValue(e.target.value)} max={blocks.length} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700" />
+          <input id="default-range" type="range" value={sliderValue} onChange={(e) => setSliderValue(e.target.value)} max={blocks.length} className="w-full h-2 bg-gray-800 rounded-lg appearance-none cursor-pointer" />
           </div>
           <div>
             {currentTime && (
@@ -132,6 +132,7 @@ function App() {
         </div>
       )}
       {snapshotLastData && <ForceGraph2D
+        backgroundColor="#000"
         graphData={snapshotLastData}
         autoPauseRedraw={false}
         nodeCanvasObject={drawNodeCanvas}

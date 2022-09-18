@@ -84,9 +84,9 @@ function App() {
       let radius = 2
 
       if (nodeBalanceBN.lt(parseEther('100.0'))) radius = 10
-      if (nodeBalanceBN.gt(parseEther('100.0'))  && nodeBalanceBN.lt(parseEther('1000.0'))) radius = 20
-      if (nodeBalanceBN.gt(parseEther('1000.0'))  && nodeBalanceBN.lt(parseEther('10000.0'))) radius = 30
-      if (nodeBalanceBN.gt(parseEther('10000.0'))  && nodeBalanceBN.lt(parseEther('10000000.0'))) radius = 40
+      if (nodeBalanceBN.gt(parseEther('100.0'))  && nodeBalanceBN.lt(parseEther('1000.0'))) radius = 15
+      if (nodeBalanceBN.gt(parseEther('1000.0'))  && nodeBalanceBN.lt(parseEther('10000.0'))) radius = 20
+      if (nodeBalanceBN.gt(parseEther('10000.0'))  && nodeBalanceBN.lt(parseEther('10000000.0'))) radius = 30
       if (nodeBalanceBN.gt(parseEther('10000000.0'))) radius = 100
 
       //if (maxBalanceLoaded && nodeHasBalance) {

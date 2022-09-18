@@ -8,17 +8,24 @@ const provider = new providers.AlchemyProvider("homestead", "5j5E8mip-BikydOl6dD
 const abi = [
   "event Transfer(address indexed from, address indexed to, uint amount)"
 ]
-const address = "0x25f8087ead173b73d6e8b84329989a8eea16cf73" // YGG
+//const address = "0x25f8087ead173b73d6e8b84329989a8eea16cf73" // YGG
+const address = "0x7d1afa7b718fb893db30a3abc0cfc608aacfebb0" // MATIC
 const contract = new ethers.Contract(address, abi, provider);
 const filter = contract.filters.Transfer()
 
 const deployentTx = (await axios.get(`https://api.etherscan.io/api?module=contract&action=getcontractcreation&contractaddresses=${address}&apikey=${etherscanApiKey}`))
   .data.result.slice()[0].txHash
 
+//const blockInterval = 2000
+//const blockStart = (await provider.getTransaction(deployentTx)).blockNumber
+////const blockEnd = (await provider.getBlock("latest")).number
+//const blockEnd = blockStart + (blockInterval * 10)
+
 const blockInterval = 2000
-const blockStart = (await provider.getTransaction(deployentTx)).blockNumber
+//const blockStart = (await provider.getTransaction(deployentTx)).blockNumber
 //const blockEnd = (await provider.getBlock("latest")).number
-const blockEnd = blockStart + (blockInterval * 10)
+const blockStart = 15258119 - blockInterval
+const blockEnd = blockStart + (blockInterval * 2)
 
 const range = (start, stop, step) => Array.from({ length: (stop - start) / step + 1 }, (_, i) => start + (i * step))
 
@@ -48,7 +55,7 @@ const eventsJSON = JSON.stringify({
 await fs.writeFile('./public/events.json', eventsJSON, 'utf-8')
 
 const getSnapshot = (blockNumber, events) => {
-  if (!events) return {nodes: [], links: []}
+  if (!events) return { nodes: [], links: [] }
   const snapshotEvents = events.filter(event => event.blockNumber <= blockNumber)
 
   const balances = snapshotEvents.reduce((balance, event) => {
@@ -56,10 +63,10 @@ const getSnapshot = (blockNumber, events) => {
     const fromBalance = balance?.[event.from] || BigNumber.from(0)
     const toBalance = balance?.[event.to] || BigNumber.from(0)
 
-    let newBalance = {[event.to]: toBalance.add(amount)}
+    let newBalance = { [event.to]: toBalance.add(amount) }
 
     //if(event.from !== ethers.constants.AddressZero) {
-      newBalance[event.from] = fromBalance.sub(amount)
+    newBalance[event.from] = fromBalance.sub(amount)
     //}
 
     return {
@@ -72,28 +79,45 @@ const getSnapshot = (blockNumber, events) => {
     const key = `${event.from}-${event.to}`
     const currentAmount = BigNumber.from(event.amount)
     const prevAmount = links?.[key] || BigNumber.from(0)
-    return {...links, [key]: prevAmount.add(currentAmount)}
+    return { ...links, [key]: prevAmount.add(currentAmount) }
   }, {})
 
-  const nodes = Object.entries(balances).map(([wallet, amount]) => ({id: wallet, amount: amount.toString()}))
-  const links = Object.entries(cummulativeTransactions).map(([key, amount]) => {
-    const [source, target] = key.split('-')
-    return {source, target, amount: amount.toString()}
-  })
+  //const nodes = Object.entries(balances).map(([wallet, amount]) => ({id: wallet, amount: amount.toString()}))
+  //const links = Object.entries(cummulativeTransactions).map(([key, amount]) => {
+  //  const [source, target] = key.split('-')
+  //  return {source, target, amount: amount.toString()}
+  //})
   return {
-    nodes,
-    links
+    balances,
+    cummulativeTransactions
   }
 }
 
 console.log(getSnapshot(blockEnd, events))
 
-const snapshotJSON = JSON.stringify(getSnapshot(blockEnd, events))
-await fs.writeFile('./public/snapshot.json', snapshotJSON, 'utf-8')
+const initialSnapshot = getSnapshot(blockEnd, events)
+const nodes = Object.entries(initialSnapshot.balances).map(([wallet, amount]) => ({ id: wallet, amount: amount.toString() }))
+const links = Object.entries(initialSnapshot.cummulativeTransactions).map(([key, amount]) => {
+  const [source, target] = key.split('-')
+  return { source, target, amount: amount.toString() }
+})
+const initialSnapshotJSON = JSON.stringify({ nodes, links })
+await fs.writeFile('./public/snapshot.json', initialSnapshotJSON, 'utf-8')
 
-const snapshotIndexes = range(blockStart, blockEnd, 20).map(index => {
+const snapshotIndexes = range(blockStart, blockEnd, 100).map(index => {
+  console.log(blockStart, blockEnd, index, (index - blockStart) / (blockEnd - blockStart))
   const fileName = `./public/snapshots/${index}.json`
-  const snapshotJSON = JSON.stringify(getSnapshot(index, events))
+  const snapshot = getSnapshot(index, events)
+  const snapshotJSON = JSON.stringify({
+    balances: Object.entries(snapshot.balances).reduce((balances, [address, amount]) => ({
+      ...balances,
+      [address]: {amount: amount.toString(), degree: Math.floor(Math.random() * 100)},
+    }), {}),
+    cummulativeTransactions: Object.entries(snapshot.cummulativeTransactions).reduce((txs, [key, amount]) => ({
+      ...txs,
+      [key]: amount.toString()
+    }))
+  })
   fsSync.writeFileSync(fileName, snapshotJSON, 'utf-8')
   return index
 })

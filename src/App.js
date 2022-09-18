@@ -1,8 +1,9 @@
 import './App.css';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import axios from 'axios'
-import { FixedNumber } from 'ethers';
+import { BigNumber, FixedNumber } from 'ethers';
 import { ForceGraph3D, ForceGraph2D } from 'react-force-graph';
+import { formatEther, parseEther } from 'ethers/lib/utils';
 
 
 function App() {
@@ -15,7 +16,7 @@ function App() {
   const [hoverNode, setHoverNode] = useState(null);
 
   const snapshotIndex = blocks?.[sliderValue]
-  const NODE_R = 8
+  const NODE_R = 100
 
   useEffect(() => {
     const retrieveBlocks = async () => {
@@ -26,10 +27,8 @@ function App() {
   }, [])
 
   useEffect(() => {
-    if (blocks.length === 0) return
     const retrieveSnapshotLast = async () => {
-      const index = blocks.slice(-1)[0]
-      const response = await axios.get(`/snapshots/${index}.json`)
+      const response = await axios.get(`/snapshot.json`)
       setSnapshotLastData(response.data)
     }
     retrieveSnapshotLast()
@@ -43,8 +42,8 @@ function App() {
       const response = await axios.get(`/snapshots/${snapshotIndex}.json`)
       setSnapshotData(response.data)
 
-      const maxBN = response.data.nodes.reduce((acc, node) => {
-        const balanceBN = FixedNumber.from(node.amount);
+      const maxBN = Object.values(response.data.balances).reduce((acc, amount) => {
+        const balanceBN = FixedNumber.from(amount);
         const diff = acc.subUnsafe(balanceBN);
         return diff.isNegative() ? balanceBN : acc;
       }, FixedNumber.from("0"));
@@ -66,19 +65,28 @@ function App() {
     (node, ctx) => {
       ctx.beginPath();
       const MIN_RADIUS = 2.0;
-      let radius = MIN_RADIUS;
+      //let radius = MIN_RADIUS;
       const maxBalanceLoaded = !maxBalanceBN.isZero();
-      const nodeBalanceBN = FixedNumber.from(node.amount);
+      const nodeBalanceBN = BigNumber.from(node.amount);
       const nodeHasBalance = !nodeBalanceBN.isZero();
-      const isNodePresent = !!snapshotData?.nodes.find(n => n.id === node.id)
+      const nodeData = snapshotData?.balances?.[node.id]
+      const isNodePresent = !!nodeData
 
-      if (maxBalanceLoaded && nodeHasBalance) {
-        let factor = nodeBalanceBN.divUnsafe(maxBalanceBN).toUnsafeFloat();
-        const extraRadius = 10.89917 - 1.0 / (Math.sqrt(Math.sqrt(factor)) + 0.11237);
-        radius = MIN_RADIUS + extraRadius;
-      }
+      let radius = 2
+
+      if (nodeBalanceBN.lt(parseEther('100.0'))) radius = 10
+      if (nodeBalanceBN.gt(parseEther('100.0'))  && nodeBalanceBN.lt(parseEther('1000.0'))) radius = 30
+      if (nodeBalanceBN.gt(parseEther('1000.0'))  && nodeBalanceBN.lt(parseEther('10000.0'))) radius = 30
+      if (nodeBalanceBN.gt(parseEther('10000.0'))) radius = 100
+
+      //if (maxBalanceLoaded && nodeHasBalance) {
+      //  let factor = nodeBalanceBN.divUnsafe(maxBalanceBN).toUnsafeFloat();
+      //  const extraRadius = 10.89917 - 1.0 / (Math.sqrt(Math.sqrt(factor)) + 0.11237);
+      //  radius = MIN_RADIUS + extraRadius;
+      //}
+
+
       ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI, false);
-      //ctx.fillStyle = !nodeHasBalance ? "grey" : node === hoverNode ? "red" : "blue";
       ctx.fillStyle = !isNodePresent ? 'transparent' : (!nodeHasBalance ? "grey" : node === hoverNode ? "red" : "blue")
       ctx.fill();
     },
@@ -87,7 +95,8 @@ function App() {
 
   const linkWidth = useCallback(
     (link) => {
-      const isLinkPresent = !!snapshotData?.links.find(l => l.source === link.source.id && l.target === link.target.id)
+      const key = `${link.source.id}-${link.target.id}`
+      const isLinkPresent = !!snapshotData?.cummulativeTransactions?.[key]
       return isLinkPresent ? 'grey' : 'transparent'
     },
     [snapshotData]
@@ -102,7 +111,6 @@ function App() {
       )}
       {snapshotLastData && <ForceGraph2D
         graphData={snapshotLastData}
-        nodeRelSize={NODE_R}
         autoPauseRedraw={false}
         nodeCanvasObject={drawNodeCanvas}
         linkColor={linkWidth}
